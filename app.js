@@ -266,6 +266,18 @@ function setReadOnly(ro) {
   }
 }
 
+
+let _saveTimer = null;
+/** Autosave com debounce — grava ~600ms após a última alteração */
+function scheduleSave() {
+  if (!canEdit(current)) return;
+  clearTimeout(_saveTimer);
+  _saveTimer = setTimeout(() => {
+    try { readSheet(); } catch {}
+    persist();
+  }, 600);
+}
+
 function persist() {
   if (!canEdit(current)) {
     setStatus("Sem permissão para editar esta ficha");
@@ -1115,10 +1127,14 @@ function recalc() {
   const cmax = chaMax(current);
   $("vit-max").textContent = "/" + vmax;
   $("cha-max").textContent = "/" + cmax;
-  $("cc").textContent = hab(current, "baseCc", "forca");
+  /* combat stats */
   $("cd").textContent = hab(current, "baseCd", "destreza");
   $("esq").textContent = hab(current, "baseEsq", "agilidade");
   $("lm").textContent = hab(current, "baseLm", "percepcao");
+  const gCc = $("cc-g"); if (gCc) gCc.textContent = $("cc").textContent;
+  const gCd = $("cd-g"); if (gCd) gCd.textContent = $("cd").textContent;
+  const gEsq = $("esq-g"); if (gEsq) gEsq.textContent = $("esq").textContent;
+  const gLm = $("lm-g"); if (gLm) gLm.textContent = $("lm").textContent;
   $("extra-stats").textContent =
     "Desloc. " + (10 + ((current.agilidade || 0) >> 1)) + "m · Reação ESQ " +
     (9 + hab(current, "baseEsq", "agilidade")) + " · Poderes " + lim.poderes;
@@ -1138,6 +1154,7 @@ function recalc() {
   drawRadar();
   drawCombatChart();
   drawPericiaChart();
+  scheduleSave();
 }
 
 function renderPowers() {
@@ -1300,7 +1317,41 @@ function bind() {
     setReadOnly(false);
     setStatus("Novo perfil · você é o dono");
   };
-  $("btn-save").onclick = () => { readSheet(); persist(); renderBingo(); };
+  
+  // Autosave em campos estáticos da ficha
+  ["nome","cla","vila","funcao","aptidoes","notas","vit-atual","cha-atual"].forEach((id) => {
+    const el = $(id);
+    if (!el) return;
+    el.addEventListener("input", () => { scheduleSave(); });
+    el.addEventListener("change", () => { scheduleSave(); });
+  });
+  // data-autosave-wired
+
+  $("btn-save").onclick = () => { readSheet(); persist(); renderBingo(); setStatus("Salvo ✓"); };
+
+  // Abas da ficha
+  const tabs = document.getElementById("sheet-tabs");
+  if (tabs) {
+    tabs.addEventListener("click", (e) => {
+      const btn = e.target.closest("[data-tab]");
+      if (!btn) return;
+      const name = btn.dataset.tab;
+      tabs.querySelectorAll(".tab").forEach((b) => b.classList.toggle("active", b === btn));
+      document.querySelectorAll(".tab-panel").forEach((p) => {
+        p.classList.toggle("active", p.dataset.panel === name);
+      });
+      // Redesenha gráficos ao abrir abas que os usam
+      if (name === "geral" || name === "combate") {
+        requestAnimationFrame(() => {
+          drawRadar();
+          drawCombatChart();
+          drawPericiaChart();
+        });
+      }
+    });
+  }
+
+
   const btnTok = $("btn-bind-token");
   if (btnTok) btnTok.onclick = () => bindToSelectedToken();
   const btnUn = $("btn-unbind-token");

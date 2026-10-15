@@ -13,13 +13,12 @@
       <span id="token-badge" class="token-badge">Sem token</span>
       <button type="button" id="btn-bingo" class="ghost">Arquivo</button>
       <button type="button" id="btn-new" class="ghost">+ Perfil</button>
-      <button type="button" id="btn-save" class="primary">Salvar</button>
+      <button type="button" id="btn-save" class="ghost" title="Salva automaticamente; clique força gravação">Autosave</button>
     </div>
   </header>
   <p class="status" id="status">Carregando…</p>
-  <p class="roll-log" id="roll-log">Rolagens: notificação + mesa (instale JustDices para histórico na mesa; Dice oficial para 3D com física).</p>
+  <p class="roll-log" id="roll-log">Rolagens: Dice+ / notificação na mesa.</p>
 
-  <!-- ══════ BINGO BOOK ══════ -->
   <main id="view-bingo">
     <div class="dossier">
       <div class="dossier-header">
@@ -29,7 +28,6 @@
         </div>
         <div class="seal C"><span class="rank">◆</span><span class="lbl">Intel</span></div>
       </div>
-
       <div class="filters">
         <input id="bingo-search" placeholder="Buscar nome, clã, jutsu, vila…" />
         <select id="bingo-filter-nivel">
@@ -44,7 +42,6 @@
     </div>
   </main>
 
-  <!-- ══════ FICHA / DOSSIÊ ══════ -->
   <main id="view-sheet" class="hidden">
     <div class="dossier">
       <div class="dossier-header">
@@ -57,7 +54,7 @@
 
       <div id="lock-banner" class="lock-banner hidden"></div>
       <div class="token-bar">
-        <button type="button" id="btn-bind-token" class="primary">Vincular ao token selecionado</button>
+        <button type="button" id="btn-bind-token" class="primary">Vincular ao token</button>
         <button type="button" id="btn-unbind-token" class="ghost" style="color:var(--ink);border-color:var(--line)">Desvincular</button>
         <button type="button" id="btn-claim-owner" class="ghost" style="color:var(--ink);border-color:var(--line)">Tornar-me dono</button>
       </div>
@@ -82,7 +79,7 @@
               <option>A</option><option>S</option><option>SS</option>
             </select>
           </label>
-          <label class="full">Função / especialidade <input id="funcao" placeholder="taijutsu, sensor, assassinato…" /></label>
+          <label class="full">Função <input id="funcao" placeholder="taijutsu, sensor…" /></label>
         </div>
       </div>
 
@@ -92,63 +89,82 @@
         <label>Chakra <div class="inline"><input id="cha-atual" type="number" /><span id="cha-max">/—</span></div></label>
       </div>
 
-      <hr class="divider" />
+      <!-- ABAS -->
+      <nav class="sheet-tabs" id="sheet-tabs" role="tablist">
+        <button type="button" class="tab active" data-tab="geral">Geral</button>
+        <button type="button" class="tab" data-tab="atributos">Atributos</button>
+        <button type="button" class="tab" data-tab="combate">Combate</button>
+        <button type="button" class="tab" data-tab="pericias">Perícias</button>
+        <button type="button" class="tab" data-tab="poderes">Poderes</button>
+        <button type="button" class="tab" data-tab="aptidoes">Aptidões</button>
+      </nav>
 
-      <div class="section-title">Atributos <span class="pts" id="pts-atr"></span></div>
-      <div class="attr-list" id="attr-list"></div>
-      <div class="radar-wrap"><canvas id="radar" width="200" height="200"></canvas></div>
+      <section class="tab-panel active" id="tab-geral" data-panel="geral">
+        <div class="section-title">Visão geral</div>
+        <div class="stat-row" style="margin-bottom:10px">
+          <div class="stat"><div class="v" id="cc-g">—</div><div class="k">CC</div></div>
+          <div class="stat"><div class="v" id="cd-g">—</div><div class="k">CD</div></div>
+          <div class="stat"><div class="v" id="esq-g">—</div><div class="k">ESQ</div></div>
+          <div class="stat"><div class="v" id="lm-g">—</div><div class="k">LM</div></div>
+        </div>
+        <p class="status" id="extra-stats" style="padding:0 0 8px;color:var(--muted)"></p>
+        <div class="section-title">Radar de atributos</div>
+        <div class="radar-wrap"><canvas id="radar" width="200" height="200"></canvas></div>
+        <div class="section-title">Foco em combate</div>
+        <div class="radar-wrap"><canvas id="chart-combat" width="220" height="200"></canvas></div>
+        <div class="section-title">Foco em perícias (top 8)</div>
+        <div class="radar-wrap"><canvas id="chart-per" width="280" height="200"></canvas></div>
+        <div class="section-title">Notas de inteligência</div>
+        <textarea id="notas" placeholder="Fraquezas, padrões, recompensas…"></textarea>
+      </section>
 
-      <hr class="divider" />
+      <section class="tab-panel" id="tab-atributos" data-panel="atributos">
+        <div class="section-title">Atributos <span class="pts" id="pts-atr"></span></div>
+        <div class="attr-list" id="attr-list"></div>
+      </section>
 
-      <div class="section-title">Combate</div>
-      <div class="stat-row">
-        <div class="stat"><div class="v" id="cc">—</div><div class="k">CC</div>
-          <button type="button" id="btn-roll-cc" class="roll-btn">🎲</button></div>
-        <div class="stat"><div class="v" id="cd">—</div><div class="k">CD</div>
-          <button type="button" id="btn-roll-cd" class="roll-btn">🎲</button></div>
-        <div class="stat"><div class="v" id="esq">—</div><div class="k">ESQ</div>
-          <button type="button" id="btn-roll-esq" class="roll-btn">🎲</button></div>
-        <div class="stat"><div class="v" id="lm">—</div><div class="k">LM</div>
-          <button type="button" id="btn-roll-lm" class="roll-btn">🎲</button></div>
-      </div>
-      <p class="status" id="extra-stats" style="padding:6px 0 0;color:var(--muted)"></p>
-      <div class="roll-box">
-        <label>Precisão <input id="roll-prec" type="number" value="0" /></label>
-        <label>Dif <input id="roll-dif" type="number" placeholder="—" /></label>
-        <button type="button" id="btn-roll-custom" class="primary">2d8</button>
-      </div>
+      <section class="tab-panel" id="tab-combate" data-panel="combate">
+        <div class="section-title">Combate</div>
+        <div class="stat-row">
+          <div class="stat"><div class="v" id="cc">—</div><div class="k">CC</div>
+            <button type="button" id="btn-roll-cc" class="roll-btn">🎲</button></div>
+          <div class="stat"><div class="v" id="cd">—</div><div class="k">CD</div>
+            <button type="button" id="btn-roll-cd" class="roll-btn">🎲</button></div>
+          <div class="stat"><div class="v" id="esq">—</div><div class="k">ESQ</div>
+            <button type="button" id="btn-roll-esq" class="roll-btn">🎲</button></div>
+          <div class="stat"><div class="v" id="lm">—</div><div class="k">LM</div>
+            <button type="button" id="btn-roll-lm" class="roll-btn">🎲</button></div>
+        </div>
+        <div class="roll-box" style="margin-top:10px">
+          <label>Precisão <input id="roll-prec" type="number" value="0" /></label>
+          <label>Dif <input id="roll-dif" type="number" placeholder="—" /></label>
+          <button type="button" id="btn-roll-custom" class="primary">2d8</button>
+        </div>
+        <div class="section-title" style="margin-top:12px">Gráfico combate</div>
+        <div class="radar-wrap"><canvas id="chart-combat-2" width="220" height="200" class="chart-mirror"></canvas></div>
+      </section>
 
-      <hr class="divider" />
+      <section class="tab-panel" id="tab-pericias" data-panel="pericias">
+        <div class="section-title">Perícias <span class="pts" id="pts-per"></span></div>
+        <div class="per-list" id="per-list"></div>
+      </section>
 
-      <div class="section-title">Perícias <span class="pts" id="pts-per"></span></div>
-      <div class="per-list" id="per-list"></div>
+      <section class="tab-panel" id="tab-poderes" data-panel="poderes">
+        <div class="section-title">Poderes / Jutsus <span class="pts" id="pts-poder"></span></div>
+        <div id="power-list"></div>
+        <button type="button" id="btn-add-power" class="primary" style="width:100%;margin-top:8px">+ Registrar poder</button>
+      </section>
 
-      <hr class="divider" />
-
-      <div class="section-title">Poderes / Jutsus <span class="pts" id="pts-poder"></span></div>
-      <div id="power-list"></div>
-      <button type="button" id="btn-add-power" class="primary" style="width:100%;margin-top:8px">+ Registrar poder</button>
-
-      <hr class="divider" />
-
-      <div class="section-title">Aptidões gratuitas e hijutsus</div>
-      <div id="apt-catalog" class="apt-catalog"></div>
-      <div class="section-title" style="margin-top:10px">Bônus ativos (marque o que aplica · edite o valor)</div>
-      <div id="apt-custom-list"></div>
-      <textarea id="aptidoes" placeholder="Notas livres de aptidões…" style="margin-top:8px"></textarea>
-
-      <hr class="divider" />
-      <div class="section-title">Foco em combate</div>
-      <div class="radar-wrap"><canvas id="chart-combat" width="220" height="200"></canvas></div>
-      <div class="section-title">Foco em perícias (top 8)</div>
-      <div class="radar-wrap"><canvas id="chart-per" width="280" height="200"></canvas></div>
-
-      <div class="section-title" style="margin-top:10px">Notas de inteligência</div>
-      <textarea id="notas" placeholder="Fraquezas, padrões de combate, recompensas, observação de campo…"></textarea>
+      <section class="tab-panel" id="tab-aptidoes" data-panel="aptidoes">
+        <div class="section-title">Aptidões e hijutsus</div>
+        <div id="apt-catalog" class="apt-catalog"></div>
+        <div class="section-title" style="margin-top:10px">Aptidões custom / bônus</div>
+        <div id="apt-custom-list"></div>
+        <textarea id="aptidoes" placeholder="Notas livres de aptidões…" style="margin-top:8px"></textarea>
+      </section>
     </div>
   </main>
 
-  <!-- ══════ EDITOR PODER ══════ -->
   <main id="view-power" class="hidden">
     <div class="dossier">
       <div class="dossier-header">
@@ -170,15 +186,12 @@
         <label>Custo chakra <input id="pow-custo" placeholder="ex: 4" /></label>
         <label>Precisão <input id="pow-precisao" type="number" placeholder="vazio = CD" /></label>
         <label>Dano <input id="pow-dano" placeholder="2d8+3 ou 2d8+Espírito" /></label>
-        <label class="full">Efeito / descrição <textarea id="pow-efeito" rows="3"></textarea></label>
+        <label class="full">Efeito <textarea id="pow-efeito" rows="3"></textarea></label>
       </div>
       <div style="display:flex;gap:8px;margin-top:12px">
         <button type="button" id="btn-pow-cancel" class="ghost" style="color:var(--ink);border-color:var(--line)">Cancelar</button>
         <button type="button" id="btn-pow-save" class="primary" style="flex:1">Salvar jutsu</button>
       </div>
-      <p class="muted" style="margin-top:10px;font-size:11px;font-family:'Share Tech Mono',monospace">
-        Dano: 2d8 · 1d8+3 · 2d8+Espírito · 2d8+Força · 1d8+NC
-      </p>
     </div>
   </main>
 

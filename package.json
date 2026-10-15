@@ -1,10 +1,10 @@
 {
   "name": "obr-shinobi-no-sho",
-  "version": "1.0.0",
+  "version": "1.2.0",
   "private": true,
-  "description": "Ficha Shinobi no Sho para Owlbear Rodeo",
+  "description": "Bingo Book — Shinobi no Sho for Owlbear Rodeo",
   "scripts": {
-    "start": "npx --yes serve public -l 5173",
-    "dev": "npx --yes serve public -l 5173"
+    "start": "npx --yes serve public -p 3000",
+    "pages": "echo 'Configure GitHub Pages: Settings > Pages > /public'"
   }
 }

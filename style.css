@@ -681,3 +681,46 @@ label {
   font-weight: 700;
   text-align: right;
 }
+
+
+/* === Abas da ficha === */
+.sheet-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin: 12px 0 10px;
+  padding: 4px;
+  background: rgba(90,74,56,0.08);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+.sheet-tabs .tab {
+  flex: 1 1 auto;
+  min-width: 72px;
+  padding: 7px 8px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  cursor: pointer;
+}
+.sheet-tabs .tab:hover { color: var(--ink); background: rgba(255,255,255,0.35); }
+.sheet-tabs .tab.active {
+  color: #fff;
+  background: var(--seal, #9b1b1b);
+  border-color: rgba(0,0,0,0.15);
+}
+.tab-panel { display: none; }
+.tab-panel.active { display: block; animation: tabIn 0.15s ease; }
+@keyframes tabIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: none; }
+}
+#btn-save.ghost {
+  opacity: 0.85;
+  font-size: 11px;
+}
