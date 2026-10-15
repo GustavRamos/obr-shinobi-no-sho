@@ -1,0 +1,16 @@
+{
+  "name": "Bingo Book — Shinobi no Sho",
+  "version": "1.1.0",
+  "manifest_version": 1,
+  "author": "Sistema D8 / Comunidade",
+  "description": "Bingo Book estilo dossiê: perfis, ameaça, jutsus, 2d8 e dano. Visual confidencial.",
+  "icon": "/icon.svg",
+  "action": {
+    "title": "Bingo Book",
+    "icon": "/icon.svg",
+    "popover": "/",
+    "height": 820,
+    "width": 460
+  },
+  "background_url": "/background.html"
+}
