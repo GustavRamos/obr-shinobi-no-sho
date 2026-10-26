@@ -1,16 +1,16 @@
 ﻿{
   "name": "Bingo Book — Shinobi no Sho",
-  "version": "1.2.2",
+  "version": "1.3.0",
   "manifest_version": 1,
   "author": "Sistema D8 / Comunidade",
-  "description": "Bingo Book Shinobi no Sho: ficha por token, aptidões, poderes, 2d8.",
+  "description": "Shinobi no Sho: fichas individuais por token, autoabertura, poderes, Hijutsus e rolagens 2d8.",
   "icon": "https://gustavramos.github.io/obr-shinobi-no-sho/icon.svg",
   "action": {
     "title": "Bingo Book",
     "icon": "https://gustavramos.github.io/obr-shinobi-no-sho/icon.svg",
     "popover": "https://gustavramos.github.io/obr-shinobi-no-sho/",
-    "height": 820,
-    "width": 460
+    "height": 900,
+    "width": 520
   },
   "background_url": "https://gustavramos.github.io/obr-shinobi-no-sho/background.html"
 }

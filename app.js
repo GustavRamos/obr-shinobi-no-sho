@@ -4,6 +4,7 @@
  */
 
 import OBR from "https://esm.sh/@owlbear-rodeo/sdk@3";
+import { HIJUTSU_CATALOG, getHijutsu } from "./hijutsu-data.js";
 
 /** Catálogo embutido de aptidões */
 const APT_CATALOG = [
@@ -15,8 +16,8 @@ const APT_CATALOG = [
   { id:"mente_afiada", nome:"Mente Afiada", gratis:true, desc:"+1 Inteligência", mods:[{tipo:"attr",alvo:"inteligencia",valor:1,ativo:true}] },
   { id:"espirito_firme", nome:"Espírito Firme", gratis:true, desc:"+1 Espírito", mods:[{tipo:"attr",alvo:"espirito",valor:1,ativo:true}] },
   { id:"iniciativa_rapida", nome:"Iniciativa Rápida", gratis:true, desc:"+1 Prontidão +1 LM", mods:[{tipo:"pericia",alvo:"Prontidão",valor:1,ativo:true},{tipo:"combat",alvo:"lm",valor:1,ativo:true}] },
-  { id:"byakugan", nome:"Byakugan", gratis:false, desc:"+2 LM +1 Percepção", mods:[{tipo:"combat",alvo:"lm",valor:2,ativo:true},{tipo:"attr",alvo:"percepcao",valor:1,ativo:true}] },
-  { id:"sharingan", nome:"Sharingan", gratis:false, desc:"+1 LM +1 ESQ", mods:[{tipo:"combat",alvo:"lm",valor:1,ativo:true},{tipo:"combat",alvo:"esq",valor:1,ativo:true}] },
+  { id:"byakugan", nome:"Byakugan (Clã Hyuuga)", gratis:false, restritoClan:"Hyuuga", desc:"Aptidão restrita ao clã Hyuuga; ativação e sentidos conforme manual p. 157. Sem bônus estático automático.", mods:[] },
+  { id:"sharingan", nome:"Sharingan (Clã Uchiha)", gratis:false, restritoClan:"Uchiha", desc:"Aptidão restrita ao clã Uchiha; ativação, visão de chakra e esquiva perceptiva conforme manual p. 180–182. Sem bônus estático automático.", mods:[] },
   { id:"elemento_katon", nome:"Elemento: Katon", gratis:false, desc:"Afinidade fogo", mods:[] },
   { id:"elemento_suiton", nome:"Elemento: Suiton", gratis:false, desc:"Afinidade água", mods:[] },
   { id:"elemento_futon", nome:"Elemento: Futon", gratis:false, desc:"Afinidade vento", mods:[] },
@@ -68,9 +69,9 @@ function attrEfetivo(c, key) {
 /** Pontos de poder gastos em jutsus (nível de cada poder) */
 function poderGastoJutsus(c) {
   let t = 0;
-  for (const p of c.poderes || []) {
-    t += Math.max(1, +p.nivel || 1);
-  }
+  for (const p of c.poderes || []) t += Math.max(1, +p.nivel || 1);
+  // Os níveis dos poderes de Hijutsu também consomem pontos de poder.
+  for (const h of c.hijutsus || []) t += Math.max(1, +h.nivel || 1);
   return t;
 }
 
@@ -103,6 +104,7 @@ const TOKEN_META = "com.shinobinosho.ficha/character";
 const SELECTED_KEY = "com.shinobinosho.ficha/selectedToken";
 const OPEN_FLAG = "com.shinobinosho.ficha/openRequest";
 const BIND_FLAG = "com.shinobinosho.ficha/bindRequest";
+const AUTO_OPEN_KEY = "com.shinobinosho.ficha/autoOpenOnSelect";
 const ATTRS = [
   { key: "forca", label: "Força", short: "For" },
   { key: "destreza", label: "Destreza", short: "Des" },
@@ -167,7 +169,7 @@ function blankChar() {
     nome: "", cla: "", nivel: "Genin", nc: 4, vila: "Konoha", funcao: "", ameaca: "C",
     forca: 0, destreza: 0, agilidade: 0, percepcao: 0, inteligencia: 0, vigor: 0, espirito: 0,
     baseCc: 3, baseCd: 3, baseEsq: 3, baseLm: 3,
-    pericias: {}, poderes: [], aptidoes: "", notas: "", vitAtual: null, chaAtual: null,
+    pericias: {}, poderes: [], hijutsus: [], permitirHijutsusMultiplos: false, aptidoes: "", notas: "", vitAtual: null, chaAtual: null,
   };
   PERICIAS.forEach((p) => { c.pericias[p.nome] = 0; });
   return c;
@@ -190,6 +192,9 @@ let editingPower = -1;
 let myPlayerId = null;
 let myRole = "PLAYER"; // GM | PLAYER
 let myName = "";
+let autoOpenOnSelect = true;
+let autosaveTimer = null;
+let isFillingSheet = false;
 
 function loadLocal() {
   try {
@@ -207,7 +212,10 @@ async function loadObr() {
   try {
     const meta = await OBR.player.getMetadata();
     if (meta?.[META_KEY] && Array.isArray(meta[META_KEY])) {
-      characters = meta[META_KEY];
+      const merged = new Map();
+      for (const c of characters) if (c?.id) merged.set(c.id, c);
+      for (const c of meta[META_KEY]) if (c?.id) merged.set(c.id, c);
+      characters = [...merged.values()];
       saveLocal();
     }
   } catch {}
@@ -242,12 +250,12 @@ function setReadOnly(ro) {
   const root = $("view-sheet");
   if (!root) return;
   root.querySelectorAll("input, select, textarea, button").forEach((el) => {
-    if (el.id === "btn-bingo" || el.id === "btn-unbind-token") return;
+    if (el.id === "btn-bingo" || el.id === "btn-open-selected-token") return;
     if (el.classList.contains("roll-btn")) {
       el.disabled = false; // rolagem liberada se pode ver
       return;
     }
-    if (el.id === "btn-save" || el.id === "btn-bind-token" || el.id === "btn-add-power" || el.id === "btn-new") {
+    if (["btn-save", "btn-bind-token", "btn-add-power", "btn-add-hijutsu", "btn-new"].includes(el.id)) {
       el.disabled = ro;
       return;
     }
@@ -266,18 +274,6 @@ function setReadOnly(ro) {
   }
 }
 
-
-let _saveTimer = null;
-/** Autosave com debounce — grava ~600ms após a última alteração */
-function scheduleSave() {
-  if (!canEdit(current)) return;
-  clearTimeout(_saveTimer);
-  _saveTimer = setTimeout(() => {
-    try { readSheet(); } catch {}
-    persist();
-  }, 600);
-}
-
 function persist() {
   if (!canEdit(current)) {
     setStatus("Sem permissão para editar esta ficha");
@@ -289,18 +285,22 @@ function persist() {
   }
   const i = characters.findIndex((c) => c.id === current.id);
   if (i >= 0) characters[i] = structuredClone(current);
-  else if (current.nome?.trim()) characters.push(structuredClone(current));
+  else if (current.nome?.trim() || current.linkedTokenId) characters.push(structuredClone(current));
   saveLocal();
   saveObr();
-  // Salva também no token vinculado (se houver)
+  // Salva também no token vinculado (se houver), e devolve a promessa para
+  // ações de navegação aguardarem a gravação antes de carregar outra ficha.
   if (current.linkedTokenId && obrReady) {
-    saveToToken(current.linkedTokenId, current).then(() => {
+    return saveToToken(current.linkedTokenId, current).then(() => {
       setStatus("Salvo no token ✓");
       updateTokenBadge();
-    }).catch(() => setStatus("Salvo (token falhou)"));
-  } else {
-    setStatus("Salvo ✓");
+    }).catch((error) => {
+      console.warn("Não foi possível salvar no token", error);
+      setStatus("Salvo localmente; falha ao gravar no token");
+    });
   }
+  setStatus("Salvo ✓");
+  return Promise.resolve();
 }
 
 async function saveToToken(tokenId, data) {
@@ -309,6 +309,8 @@ async function saveToToken(tokenId, data) {
   payload.linkedTokenId = tokenId;
   await OBR.scene.items.updateItems([tokenId], (items) => {
     for (const item of items) {
+      item.metadata = item.metadata || {};
+      payload.linkedTokenName = item.name || payload.linkedTokenName || "";
       item.metadata[TOKEN_META] = payload;
       // nome no token ajuda o GM
       if (payload.nome && item.name !== undefined) {
@@ -325,31 +327,46 @@ async function loadFromToken(tokenId) {
   const meta = items[0].metadata?.[TOKEN_META];
   if (meta && typeof meta === "object") {
     const c = structuredClone(meta);
+    const originalTokenId = c.linkedTokenId;
     c.linkedTokenId = tokenId;
+    c.linkedTokenName = items[0].name || c.linkedTokenName || "";
     if (!c.id) c.id = crypto.randomUUID();
     normalize(c);
+    // Ao duplicar um token no mapa, o Owlbear copia o metadata. Uma cópia
+    // precisa de ID de ficha próprio para não sobrescrever o perfil original.
+    // Tokens legados sem linkedTokenId também recebem vínculo canônico na primeira leitura.
+    if (originalTokenId !== tokenId) {
+      if (originalTokenId || c.id) {
+        c.id = crypto.randomUUID();
+        c.notas = [c.notas, "Ficha criada a partir de uma cópia de token ou metadados legados; possui ID independente."].filter(Boolean).join("\n");
+      }
+      try { await saveToToken(tokenId, c); }
+      catch (error) { console.warn("Não foi possível gravar a ficha independente no token duplicado", error); }
+    }
     return c;
   }
-  // Token sem ficha: cria em branco já vinculada
+  // Token sem ficha: cria e grava imediatamente uma ficha vazia no próprio token.
+  // Assim, fechar o popover antes de editar não gera um novo ID a cada abertura.
   const c = blankChar();
   c.linkedTokenId = tokenId;
-  // tenta usar o nome do item
-  try {
-    if (items[0].name) c.nome = items[0].name;
-  } catch {}
+  c.linkedTokenName = items[0].name || "";
+  if (items[0].name) c.nome = items[0].name;
+  normalize(c);
+  try { await saveToToken(tokenId, c); }
+  catch (error) { console.warn("Não foi possível gravar a ficha inicial no token", error); }
   return c;
 }
 
 async function getSelectedTokenId() {
   if (!obrReady) return null;
   try {
-    const meta = await OBR.player.getMetadata();
-    if (meta?.[SELECTED_KEY]) return meta[SELECTED_KEY];
-  } catch {}
-  try {
     const sel = await OBR.player.getSelection?.();
-    if (sel && sel.length === 1) return sel[0];
+    if (Array.isArray(sel) && sel.length === 1) {
+      const items = await OBR.scene.items.getItems(sel);
+      if (items[0]?.layer === "CHARACTER") return items[0].id;
+    }
   } catch {}
+  // Não usa SELECTED_KEY como fallback: pode apontar para um token antigo.
   return null;
 }
 
@@ -357,12 +374,62 @@ function updateTokenBadge() {
   const el = $("token-badge");
   if (!el) return;
   if (current.linkedTokenId) {
-    el.textContent = "🔗 Token vinculado";
+    el.textContent = "🔗 " + (current.linkedTokenName || "Token vinculado");
     el.className = "token-badge on";
   } else {
     el.textContent = "Sem token";
     el.className = "token-badge";
   }
+}
+
+async function openSelectedTokenSheet() {
+  await flushAutosave();
+  const tid = await getSelectedTokenId();
+  if (!tid) {
+    setStatus("Selecione um token da camada Character no mapa");
+    return;
+  }
+  const data = await loadFromToken(tid);
+  if (!data) {
+    setStatus("Não foi possível ler este token");
+    return;
+  }
+  if (!canAccess(data)) {
+    show("bingo");
+    renderBingo();
+    setStatus("🔒 Esta ficha pertence a " + (data.ownerName || "outro jogador"));
+    return;
+  }
+  current = data;
+  const i = characters.findIndex((c) => c.id === current.id || c.linkedTokenId === tid);
+  if (i >= 0) characters[i] = structuredClone(current);
+  else characters.push(structuredClone(current));
+  saveLocal();
+  show("sheet");
+  fillSheet();
+  setReadOnly(!canEdit(current));
+  updateTokenBadge();
+  setStatus(current.nome ? "Dossiê de " + current.nome + " carregado" : "Ficha nova no token · preencha e salve");
+}
+
+async function toggleAutoOpen() {
+  autoOpenOnSelect = !autoOpenOnSelect;
+  localStorage.setItem(AUTO_OPEN_KEY, JSON.stringify(autoOpenOnSelect));
+  if (obrReady) {
+    try { await OBR.player.setMetadata({ [AUTO_OPEN_KEY]: autoOpenOnSelect }); } catch {}
+  }
+  renderAutoOpenButton();
+  setStatus(autoOpenOnSelect ? "Abertura automática ativada: selecionar token abre o dossiê" : "Abertura automática desativada; use o menu do token ou o botão Abrir/Criar ficha");
+}
+
+function renderAutoOpenButton() {
+  const button = $("btn-auto-open");
+  if (!button) return;
+  button.textContent = "Auto-ficha: " + (autoOpenOnSelect ? "ON" : "OFF");
+  button.title = autoOpenOnSelect
+    ? "Ao selecionar um token Character, abre a ficha. Clique para desativar."
+    : "Abertura automática desativada. Clique para ativar.";
+  button.classList.toggle("auto-enabled", autoOpenOnSelect);
 }
 
 async function bindToSelectedToken() {
@@ -375,53 +442,72 @@ async function bindToSelectedToken() {
     setStatus("Selecione um token de personagem no mapa");
     return;
   }
-  // Se o token já tem ficha de outro dono, bloqueia
-  const existing = await loadFromToken(tid);
-  if (existing && existing.ownerId && existing.ownerId !== myPlayerId && !isGM()) {
-    setStatus("🔒 Token já tem ficha de " + (existing.ownerName || "outro jogador"));
+  // Não sobrescreve silenciosamente a ficha já gravada no token.
+  const items = await OBR.scene.items.getItems([tid]);
+  const tokenMeta = items[0]?.metadata?.[TOKEN_META];
+  if (tokenMeta && tokenMeta.id && tokenMeta.id !== current.id) {
+    setStatus("Este token já possui uma ficha. Use Abrir/Criar ficha para carregá-la primeiro.");
     return;
+  }
+  readSheet();
+  if (current.linkedTokenId && current.linkedTokenId !== tid) {
+    current = structuredClone(current);
+    current.id = crypto.randomUUID();
   }
   claimOwnership(current);
   current.linkedTokenId = tid;
-  readSheet();
+  current.linkedTokenName = items[0]?.name || current.linkedTokenName || "";
   await saveToToken(tid, current);
   persist();
   updateTokenBadge();
   setStatus("Ficha vinculada ao token · dono: " + (current.ownerName || "você"));
 }
 
+let openingTokenRequest = false;
 async function openFromTokenRequest() {
-  if (!obrReady) return;
+  if (!obrReady || openingTokenRequest) return false;
+  openingTokenRequest = true;
+  let tid = null;
+  let requestHandled = false;
   try {
     const meta = await OBR.player.getMetadata();
-    const tid = meta?.[SELECTED_KEY];
-    if (!tid) return;
+    tid = meta?.[SELECTED_KEY];
+    if (!tid || !meta?.[OPEN_FLAG]) return false;
+    requestHandled = true;
+    await flushAutosave();
+
     const data = await loadFromToken(tid);
-    if (data) {
-      if (!canAccess(data)) {
-        setStatus("🔒 Esta ficha pertence a " + (data.ownerName || "outro jogador"));
-        show("bingo");
-        renderBingo();
-        return;
-      }
-      current = data;
-      const i = characters.findIndex((c) => c.id === current.id || c.linkedTokenId === tid);
-      if (i >= 0) characters[i] = structuredClone(current);
-      else characters.push(structuredClone(current));
-      saveLocal();
-      show("sheet");
-      fillSheet();
-      setReadOnly(!canEdit(current));
-      updateTokenBadge();
-      setStatus(canEdit(current) ? "Dossiê do token carregado" : "Somente leitura");
+    if (!data) return false;
+    if (!canAccess(data)) {
+      setStatus("🔒 Esta ficha pertence a " + (data.ownerName || "outro jogador"));
+      show("bingo");
+      renderBingo();
+      return true;
     }
-    // limpa flags
-    await OBR.player.setMetadata({
-      [OPEN_FLAG]: undefined,
-      [BIND_FLAG]: undefined,
-    });
+
+    current = data;
+    const i = characters.findIndex((c) => c.id === current.id || c.linkedTokenId === tid);
+    if (i >= 0) characters[i] = structuredClone(current);
+    else characters.push(structuredClone(current));
+    saveLocal();
+    show("sheet");
+    fillSheet();
+    setReadOnly(!canEdit(current));
+    updateTokenBadge();
+    setStatus(canEdit(current)
+      ? (current.nome ? "Dossiê de " + current.nome + " carregado" : "Ficha nova no token · preencha e salve")
+      : "Somente leitura");
+    return true;
   } catch (e) {
-    console.warn(e);
+    console.warn("Não foi possível abrir a ficha do token", e);
+    setStatus("Não foi possível ler a ficha deste token");
+    return false;
+  } finally {
+    if (requestHandled) {
+      // setMetadata aplica um merge parcial; false desativa a flag de forma serializável.
+      try { await OBR.player.setMetadata({ [OPEN_FLAG]: false, [BIND_FLAG]: false }); } catch {}
+    }
+    openingTokenRequest = false;
   }
 }
 
@@ -576,8 +662,38 @@ function esc(s) {
 
 function normalize(c) {
   if (!c.pericias) c.pericias = {};
+  if (!Array.isArray(c.hijutsus)) c.hijutsus = [];
+  if (typeof c.permitirHijutsusMultiplos !== "boolean") c.permitirHijutsusMultiplos = false;
+  // Migração dos perfis antigos: antes, o campo "Clã / Hijutsu" também podia
+  // conter o nome de um Hijutsu. Move apenas correspondências exatas para a seção própria.
+  const oldChoice = String(c.cla || "").trim().toLocaleLowerCase("pt-BR").normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  const legacyHijutsu = HIJUTSU_CATALOG.find((h) => {
+    const candidates = [h.id, h.nome, h.nome.split(" (")[0]].map((v) => String(v).toLocaleLowerCase("pt-BR").normalize("NFD").replace(/[\u0300-\u036f]/g, ""));
+    return candidates.some((v) => v === oldChoice);
+  });
+  if (legacyHijutsu) {
+    if (!c.hijutsus.some((h) => h.id === legacyHijutsu.id)) {
+      c.hijutsus.push({ id: legacyHijutsu.id, nivel: 1, ativo: false, notas: "Migrado do campo antigo Clã / Hijutsu. Confira o nível e os requisitos do manual." });
+    }
+    c.cla = "";
+  }
   PERICIAS.forEach((p) => { if (c.pericias[p.nome] == null) c.pericias[p.nome] = 0; });
   if (!Array.isArray(c.poderes)) c.poderes = [];
+  // Byakugan e Sharingan são aptidões restritas de clãs no manual, não Hijutsus
+  // autônomos nem bônus planos. Converte fichas antigas sem manter bônus incorretos.
+  if (Array.isArray(c.aptidoesSel)) {
+    c.aptidoesSel.forEach((a) => {
+      if (a.id === "byakugan") {
+        a.nome = "Byakugan (Clã Hyuuga)";
+        a.desc = "Aptidão restrita do clã; ver ativação e sentidos no manual, p. 157.";
+        a.mods = [];
+      } else if (a.id === "sharingan") {
+        a.nome = "Sharingan (Clã Uchiha)";
+        a.desc = "Aptidão restrita do clã; ver ativação e benefícios no manual, p. 180–182.";
+        a.mods = [];
+      }
+    });
+  }
   if (c.vitAtual == null) c.vitAtual = vitMax(c);
   if (c.chaAtual == null) c.chaAtual = chaMax(c);
 }
@@ -645,13 +761,14 @@ function renderBingo() {
       '<button type="button" data-open="' + c.id + '">Dossiê</button>' +
       '<button type="button" data-roll-cc="' + c.id + '">CC 🎲</button>' +
       '<button type="button" data-roll-esq="' + c.id + '">ESQ 🎲</button>' +
-      '<button type="button" data-del="' + c.id + '" class="danger">✕</button></div>';
+      '<button type="button" data-del="' + c.id + '" class="danger" ' + (canEdit(c) ? '' : 'disabled title="Somente dono/GM"') + '>✕</button></div>';
     box.appendChild(card);
   });
 
   box.onclick = async (e) => {
     const t = e.target;
     if (t.dataset.open) {
+      await flushAutosave();
       const found = characters.find((x) => x.id === t.dataset.open);
       if (!found || !canAccess(found)) {
         setStatus("🔒 Sem permissão");
@@ -665,6 +782,20 @@ function renderBingo() {
       return;
     }
     if (t.dataset.del) {
+      const doomed = characters.find((x) => x.id === t.dataset.del);
+      if (!doomed || !canEdit(doomed)) {
+        setStatus("Sem permissão para excluir esta ficha");
+        return;
+      }
+      if (doomed.linkedTokenId && obrReady) {
+        try {
+          await OBR.scene.items.updateItems([doomed.linkedTokenId], (items) => {
+            for (const item of items) {
+              if (item.metadata) delete item.metadata[TOKEN_META];
+            }
+          });
+        } catch (err) { console.warn("Não foi possível remover os dados do token", err); }
+      }
       characters = characters.filter((x) => x.id !== t.dataset.del);
       saveLocal(); saveObr();
       renderBingo();
@@ -727,12 +858,13 @@ function renderAptitudes() {
 
   APT_CATALOG.forEach((cat) => {
     const on = current.aptidoesSel.some((x) => x.id === cat.id);
+    const clanEligible = !cat.restritoClan || (current.cla || "").toLocaleLowerCase("pt-BR").includes(cat.restritoClan.toLocaleLowerCase("pt-BR"));
     const row = document.createElement("label");
-    row.className = "apt-row" + (cat.gratis ? " gratis" : " paga");
+    row.className = "apt-row" + (cat.gratis ? " gratis" : " paga") + (cat.restritoClan && !clanEligible ? " clan-locked" : "");
     const cb = document.createElement("input");
     cb.type = "checkbox";
     cb.checked = on;
-    cb.disabled = !canEdit(current);
+    cb.disabled = !canEdit(current) || (!clanEligible && !on);
     cb.onchange = () => {
       if (!on) {
         // tentando adicionar
@@ -994,6 +1126,7 @@ function applyNcLimitsToInputs() {
 }
 
 function fillSheet() {
+  isFillingSheet = true;
   normalize(current);
   $("nome").value = current.nome || "";
   $("cla").value = current.cla || "";
@@ -1004,6 +1137,8 @@ function fillSheet() {
   $("ameaca").value = current.ameaca || "C";
   $("aptidoes").value = current.aptidoes || "";
   $("notas").value = current.notas || "";
+  const multiRule = $("hijutsu-multiple");
+  if (multiRule) multiRule.checked = !!current.permitirHijutsusMultiplos;
   $("vit-atual").value = current.vitAtual ?? vitMax(current);
   $("cha-atual").value = current.chaAtual ?? chaMax(current);
   // dossiê visual
@@ -1094,12 +1229,14 @@ function fillSheet() {
   });
 
   renderPowers();
+  renderHijutsus();
   renderAptitudes();
   recalc();
   drawRadar();
   drawCombatChart();
   drawPericiaChart();
   updateTokenBadge();
+  isFillingSheet = false;
 }
 
 function recalc() {
@@ -1127,14 +1264,10 @@ function recalc() {
   const cmax = chaMax(current);
   $("vit-max").textContent = "/" + vmax;
   $("cha-max").textContent = "/" + cmax;
-  /* combat stats */
+  $("cc").textContent = hab(current, "baseCc", "forca");
   $("cd").textContent = hab(current, "baseCd", "destreza");
   $("esq").textContent = hab(current, "baseEsq", "agilidade");
   $("lm").textContent = hab(current, "baseLm", "percepcao");
-  const gCc = $("cc-g"); if (gCc) gCc.textContent = $("cc").textContent;
-  const gCd = $("cd-g"); if (gCd) gCd.textContent = $("cd").textContent;
-  const gEsq = $("esq-g"); if (gEsq) gEsq.textContent = $("esq").textContent;
-  const gLm = $("lm-g"); if (gLm) gLm.textContent = $("lm").textContent;
   $("extra-stats").textContent =
     "Desloc. " + (10 + ((current.agilidade || 0) >> 1)) + "m · Reação ESQ " +
     (9 + hab(current, "baseEsq", "agilidade")) + " · Poderes " + lim.poderes;
@@ -1154,20 +1287,182 @@ function recalc() {
   drawRadar();
   drawCombatChart();
   drawPericiaChart();
-  scheduleSave();
+}
+
+function isAllowedHijutsuCombination(ids) {
+  const set = new Set(ids);
+  if (set.size <= 1) return true;
+  // Exceções expressamente descritas no manual: Senjutsu com Kuchiyose;
+  // Hibon Ninpou com Tensai, sem adicionar Versatilidade nessa combinação.
+  if (set.size === 2 && set.has("senjutsu") && set.has("kuchiyose")) return true;
+  if (set.size === 2 && set.has("hibon-ninpou") && set.has("tensai")) return true;
+  return !!current.permitirHijutsusMultiplos;
+}
+
+function updateHijutsuGuidance() {
+  const box = $("hijutsu-guidance");
+  if (!box) return;
+  const selected = (current.hijutsus || []).map((h) => getHijutsu(h.id)).filter(Boolean);
+  const ids = selected.map((h) => h.id);
+  const issues = [];
+  const limit = pointsForNc(current.nc || 4).limite;
+  for (const saved of current.hijutsus || []) {
+    const cat = getHijutsu(saved.id);
+    if (!cat) continue;
+    const max = Math.min(cat.nivelMax || 10, limit, 10);
+    if (+saved.nivel > max) {
+      issues.push(cat.nome + " está no nível " + saved.nivel + ", acima do limite geral atual (" + max + "). Verifique o NC/pré-requisitos.");
+    }
+  }
+  const hibonTensai = ids.includes("hibon-ninpou") && ids.includes("tensai");
+  if (hibonTensai && ids.includes("versatilidade")) {
+    issues.push("O manual não permite comprar Versatilidade na combinação Hibon Ninpou + Tensai.");
+  }
+  if (ids.includes("senjutsu") && (+current.vigor || 0) < 14) {
+    issues.push("Senjutsu: o manual exige Vigor 14; a ficha está com Vigor " + (+current.vigor || 0) + ". Confira também Resistência Maior (Vigor) ou Regeneração, conforme a via escolhida.");
+  }
+  const clan = (current.cla || "").trim();
+  const clanNorm = clan.toLocaleLowerCase("pt-BR").normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  const clanIsHijutsu = HIJUTSU_CATALOG.some((h) => [h.id, h.nome, h.nome.split(" (")[0]].some((v) => String(v).toLocaleLowerCase("pt-BR").normalize("NFD").replace(/[\u0300-\u036f]/g, "") === clanNorm));
+  const clanIsPlaceholder = !clan || /^(nenhum|sem clã|sem cla|nenhum clã|nenhum cla|—|-|n\/a)$/i.test(clan);
+  const senjutsuWithMokuton = ids.includes("senjutsu") && /mokuton/i.test(clan);
+  const hasKuchiyoseRoute = ids.includes("kuchiyose") || (current.poderes || []).some((p) => /kuchiyose/i.test(p.nome || ""));
+  if (ids.includes("senjutsu") && !senjutsuWithMokuton && !hasKuchiyoseRoute) {
+    issues.push("Senjutsu: registre/valide uma via permitida no manual (por exemplo, Kuchiyose de sapos ou cobras com os pré-requisitos, ou Mokuton com os requisitos correspondentes).");
+  }
+  if (clanIsHijutsu) issues.push("O campo Clã / linhagem parece conter um Hijutsu antigo. Registre-o na seção Hijutsus para acompanhar nível e custo corretamente.");
+  if (!clanIsPlaceholder && !clanIsHijutsu && ids.length && !senjutsuWithMokuton && !current.permitirHijutsusMultiplos) {
+    issues.push("Regra padrão: escolha um clã OU um Hijutsu. O personagem tem um clã preenchido e Hijutsu(s); marque a regra opcional se o Mestre autorizou essa combinação.");
+  }
+  if (ids.length > 1 && !isAllowedHijutsuCombination(ids)) {
+    issues.push("Regra padrão: somente um Hijutsu. A combinação atual requer a regra opcional ou autorização do Mestre; consulte as exceções do manual.");
+  }
+  if (current.permitirHijutsusMultiplos && ids.length > 1) {
+    issues.push("Regra opcional ativa: o Mestre deve definir quais benefícios se acumulam e como os Hijutsus interagem.");
+  }
+  box.className = "hijutsu-guidance" + (issues.length ? " has-warning" : "" );
+  box.innerHTML = issues.length
+    ? "<strong>Conferência do manual</strong><ul>" + issues.map((x) => "<li>" + esc(x) + "</li>").join("") + "</ul>"
+    : "Compatibilidade verificada para as opções registradas. Requisitos específicos e efeitos de cada técnica ainda devem ser conferidos nas páginas indicadas do manual.";
+}
+
+function renderHijutsus() {
+  const select = $("hijutsu-select");
+  const add = $("btn-add-hijutsu");
+  const list = $("hijutsu-list");
+  const allow = $("hijutsu-multiple");
+  if (!select || !add || !list) return;
+  if (!Array.isArray(current.hijutsus)) current.hijutsus = [];
+  const selectedIds = new Set(current.hijutsus.map((h) => h.id));
+  const countLabel = $("hijutsu-count");
+  if (countLabel) countLabel.textContent = current.hijutsus.length + " registrado(s)";
+  select.innerHTML = '<option value="">Escolha um Hijutsu…</option>';
+  HIJUTSU_CATALOG.filter((item) => !selectedIds.has(item.id)).forEach((item) => {
+    const option = document.createElement("option");
+    option.value = item.id;
+    option.textContent = item.nome + " · p. " + item.pagina;
+    select.appendChild(option);
+  });
+  select.disabled = !canEdit(current) || select.options.length <= 1;
+  add.disabled = !canEdit(current) || select.options.length <= 1;
+  if (allow) {
+    allow.checked = !!current.permitirHijutsusMultiplos;
+    allow.disabled = !canEdit(current);
+  }
+
+  list.innerHTML = "";
+  if (!current.hijutsus.length) {
+    const empty = document.createElement("p");
+    empty.className = "empty hijutsu-empty";
+    empty.textContent = "Nenhum Hijutsu registrado. Selecione um acima para acompanhar nível, estado e anotações.";
+    list.appendChild(empty);
+  }
+  current.hijutsus.forEach((saved, index) => {
+    const cat = getHijutsu(saved.id);
+    if (!cat) return;
+    const card = document.createElement("article");
+    card.className = "hijutsu-card";
+    const max = Math.min(cat.nivelMax || 10, pointsForNc(current.nc || 4).limite, 10);
+    const level = Math.max(1, +saved.nivel || 1);
+    card.innerHTML =
+      '<div class="hijutsu-card-head"><div><strong>' + esc(cat.nome) + '</strong>' +
+      '<small>Manual p. ' + cat.pagina + ' · gasto na ficha: ' + level + ' ponto(s) de poder</small></div>' +
+      '<button type="button" class="danger hijutsu-remove" data-hijutsu-remove="' + index + '" title="Remover Hijutsu" ' + (canEdit(current) ? '' : 'disabled') + '>✕</button></div>' +
+      '<p class="hijutsu-summary">' + esc(cat.resumo) + '</p>' +
+      '<p class="hijutsu-prereq"><b>Pré-requisitos / notas:</b> ' + esc(cat.preRequisitos) + '</p>' +
+      '<div class="hijutsu-controls"><label>Nível do poder <input type="number" min="1" max="' + Math.max(1, max) + '" value="' + level + '" data-hijutsu-level="' + index + '" ' + (canEdit(current) ? '' : 'disabled') + ' /></label>' +
+      '<label class="hijutsu-active"><input type="checkbox" data-hijutsu-active="' + index + '" ' + (saved.ativo ? 'checked' : '') + ' ' + (canEdit(current) ? '' : 'disabled') + ' /> Modo/estado ativo (se aplicável)</label>' +
+      '<span class="hijutsu-cap">Limite geral: ' + max + ' · máximo específico: ' + cat.nivelMax + '</span></div>' +
+      '<label class="hijutsu-notes-label">Detalhes do personagem<textarea rows="2" data-hijutsu-notes="' + index + '" placeholder="' + esc(cat.notasPlaceholder || 'Técnicas, requisitos, custos especiais e limitações…') + '" ' + (canEdit(current) ? '' : 'disabled') + '>' + esc(saved.notas || '') + '</textarea></label>';
+    list.appendChild(card);
+  });
+  updateHijutsuGuidance();
+
+  select.onchange = () => { add.disabled = !canEdit(current) || !select.value; };
+  add.onclick = () => {
+    const cat = getHijutsu(select.value);
+    if (!cat) return;
+    current.hijutsus.push({ id: cat.id, nivel: 1, ativo: false, notas: "" });
+    select.value = "";
+    renderHijutsus();
+    renderPowers();
+    recalc();
+    scheduleAutosave();
+  };
+  if (allow) allow.onchange = () => {
+    current.permitirHijutsusMultiplos = allow.checked;
+    updateHijutsuGuidance();
+    scheduleAutosave();
+  };
+  list.oninput = (event) => {
+    const t = event.target;
+    if (t.dataset.hijutsuNotes != null) {
+      const idx = +t.dataset.hijutsuNotes;
+      if (current.hijutsus[idx]) current.hijutsus[idx].notas = t.value;
+    }
+  };
+  list.onchange = (event) => {
+    const t = event.target;
+    if (t.dataset.hijutsuLevel != null) {
+      const idx = +t.dataset.hijutsuLevel;
+      const cat = getHijutsu(current.hijutsus[idx]?.id);
+      if (!cat) return;
+      const max = Math.min(cat.nivelMax || 10, pointsForNc(current.nc || 4).limite, 10);
+      current.hijutsus[idx].nivel = Math.max(1, Math.min(max, +t.value || 1));
+      renderHijutsus();
+      renderPowers();
+      recalc();
+    } else if (t.dataset.hijutsuActive != null) {
+      const idx = +t.dataset.hijutsuActive;
+      if (current.hijutsus[idx]) current.hijutsus[idx].ativo = t.checked;
+    }
+    updateHijutsuGuidance();
+    scheduleAutosave();
+  };
+  list.onclick = (event) => {
+    const button = event.target.closest("[data-hijutsu-remove]");
+    if (!button) return;
+    const idx = +button.dataset.hijutsuRemove;
+    current.hijutsus.splice(idx, 1);
+    renderHijutsus();
+    renderPowers();
+    recalc();
+    scheduleAutosave();
+  };
 }
 
 function renderPowers() {
   const box = $("power-list");
   box.innerHTML = "";
   const disp = poderDisponivel(current);
-  const gJ = poderGastoJutsus(current);
+  const gJ = (current.poderes || []).reduce((s, p) => s + Math.max(1, +p.nivel || 1), 0);
+  const gH = (current.hijutsus || []).reduce((s, h) => s + Math.max(1, +h.nivel || 1), 0);
   const gA = poderGastoApt(current);
-  const total = gJ + gA;
+  const total = gJ + gH + gA;
   const hdr = document.createElement("p");
   hdr.className = "apt-info" + (total > disp ? " bad" : "");
   hdr.innerHTML = "Pontos de poder: <strong>" + total + " / " + disp + "</strong>" +
-    " <span class='muted'>(jutsus " + gJ + " + aptidões extra " + gA + ")</span>";
+    " <span class='muted'>(jutsus " + gJ + " + hijutsus " + gH + " + aptidões extra " + gA + ")</span>";
   box.appendChild(hdr);
   (current.poderes || []).forEach((p, idx) => {
     const div = document.createElement("div");
@@ -1240,6 +1535,8 @@ function savePowerEditor() {
   else current.poderes[editingPower] = p;
   show("sheet");
   renderPowers();
+  recalc();
+  scheduleAutosave();
 }
 
 function drawRadar() {
@@ -1293,6 +1590,32 @@ function drawRadar() {
   });
 }
 
+function scheduleAutosave() {
+  if (isFillingSheet || !current || !canEdit(current)) return;
+  clearTimeout(autosaveTimer);
+  try { readSheet(); } catch {}
+  setStatus("Alterações pendentes…");
+  autosaveTimer = setTimeout(() => {
+    readSheet();
+    persist();
+    renderBingo();
+  }, 650);
+}
+
+async function flushAutosave() {
+  clearTimeout(autosaveTimer);
+  if (isFillingSheet || !$('view-sheet') || $('view-sheet').classList.contains('hidden')) return;
+  if (!current || !canEdit(current)) return;
+  try {
+    readSheet();
+    const pendingSave = persist();
+    renderBingo();
+    await pendingSave;
+  } catch (error) {
+    console.warn("Não foi possível finalizar o salvamento automático", error);
+  }
+}
+
 function readSheet() {
   current.nome = $("nome").value;
   current.cla = $("cla").value;
@@ -1308,8 +1631,21 @@ function readSheet() {
 }
 
 function bind() {
-  $("btn-bingo").onclick = () => { show("bingo"); renderBingo(); };
-  $("btn-new").onclick = () => {
+  const sheetRoot = $("view-sheet");
+  if (sheetRoot) {
+    sheetRoot.addEventListener("input", scheduleAutosave);
+    sheetRoot.addEventListener("change", scheduleAutosave);
+    sheetRoot.addEventListener("click", (event) => {
+      const button = event.target.closest("button");
+      if (!button || button.classList.contains("roll-btn")) return;
+      if (["btn-open-selected-token", "btn-open-selected-token-top", "btn-bind-token", "btn-unbind-token", "btn-claim-owner"].includes(button.id)) return;
+      setTimeout(scheduleAutosave, 0);
+    });
+  }
+  $("btn-auto-open").onclick = toggleAutoOpen;
+  $("btn-bingo").onclick = async () => { await flushAutosave(); show("bingo"); renderBingo(); };
+  $("btn-new").onclick = async () => {
+    await flushAutosave();
     current = blankChar();
     claimOwnership(current);
     show("sheet");
@@ -1317,48 +1653,20 @@ function bind() {
     setReadOnly(false);
     setStatus("Novo perfil · você é o dono");
   };
-  
-  // Autosave em campos estáticos da ficha
-  ["nome","cla","vila","funcao","aptidoes","notas","vit-atual","cha-atual"].forEach((id) => {
-    const el = $(id);
-    if (!el) return;
-    el.addEventListener("input", () => { scheduleSave(); });
-    el.addEventListener("change", () => { scheduleSave(); });
-  });
-  // data-autosave-wired
-
-  $("btn-save").onclick = () => { readSheet(); persist(); renderBingo(); setStatus("Salvo ✓"); };
-
-  // Abas da ficha
-  const tabs = document.getElementById("sheet-tabs");
-  if (tabs) {
-    tabs.addEventListener("click", (e) => {
-      const btn = e.target.closest("[data-tab]");
-      if (!btn) return;
-      const name = btn.dataset.tab;
-      tabs.querySelectorAll(".tab").forEach((b) => b.classList.toggle("active", b === btn));
-      document.querySelectorAll(".tab-panel").forEach((p) => {
-        p.classList.toggle("active", p.dataset.panel === name);
-      });
-      // Redesenha gráficos ao abrir abas que os usam
-      if (name === "geral" || name === "combate") {
-        requestAnimationFrame(() => {
-          drawRadar();
-          drawCombatChart();
-          drawPericiaChart();
-        });
-      }
-    });
-  }
-
-
+  $("btn-save").onclick = () => { readSheet(); persist(); renderBingo(); };
   const btnTok = $("btn-bind-token");
   if (btnTok) btnTok.onclick = () => bindToSelectedToken();
+  const btnOpenToken = $("btn-open-selected-token");
+  if (btnOpenToken) btnOpenToken.onclick = () => openSelectedTokenSheet();
+  const btnOpenTokenTop = $("btn-open-selected-token-top");
+  if (btnOpenTokenTop) btnOpenTokenTop.onclick = () => openSelectedTokenSheet();
   const btnUn = $("btn-unbind-token");
   if (btnUn) btnUn.onclick = () => {
     current.linkedTokenId = null;
+    current.linkedTokenName = "";
+    persist();
     updateTokenBadge();
-    setStatus("Token desvinculado (ficha só na lista)");
+    setStatus("Token desvinculado nesta ficha. A ficha salva no token continua lá.");
   };
   const btnClaim = $("btn-claim-owner");
   if (btnClaim) btnClaim.onclick = () => {
@@ -1389,6 +1697,8 @@ function bind() {
     const entry = Object.entries(SHINOBI_NC).find(([, n]) => n === current.nc);
     if (entry) { current.nivel = entry[0]; $("nivel").value = entry[0]; }
     applyNcLimitsToInputs();
+    renderHijutsus();
+    renderPowers();
     recalc();
   };
   $("ameaca").onchange = () => {
@@ -1399,7 +1709,10 @@ function bind() {
       $("sheet-rank").textContent = current.ameaca;
     }
   };
+  $("cla").oninput = () => { current.cla = $("cla").value; updateHijutsuGuidance(); };
+  $("cla").onchange = () => renderAptitudes();
   $("nome").oninput = () => {
+    current.nome = $("nome").value;
     const por = $("sheet-portrait");
     if (por) por.textContent = ($("nome").value || "忍").trim().charAt(0).toUpperCase() || "忍";
   };
@@ -1432,51 +1745,42 @@ async function boot() {
       myName = await OBR.player.getName();
       setStatus("Owlbear · " + myName + (isGM() ? " (GM)" : " (jogador)"));
 
-      // Menu de contexto também no popover (redundante com background)
-      try {
-        await OBR.contextMenu.create({
-          id: "com.shinobinosho.ficha/menu-open-popover",
-          icons: [{
-            icon: "/icon.svg",
-            label: "Bingo Book — Dossiê",
-            filter: { min: 1, max: 1, every: [{ key: "layer", value: "CHARACTER" }] },
-          }],
-          onClick: async (context) => {
-            const item = context.items[0];
-            if (!item) return;
-            const data = await loadFromToken(item.id);
-            const c = data || blankChar();
-            c.linkedTokenId = item.id;
-            if (!canAccess(c)) {
-              setStatus("🔒 Ficha de " + (c.ownerName || "outro jogador"));
-              return;
-            }
-            current = c;
-            show("sheet");
-            fillSheet();
-            setReadOnly(!canEdit(current));
-            updateTokenBadge();
-            setStatus(canEdit(current) ? "Dossiê do token" : "Somente leitura");
-          },
-        });
-      } catch {}
-
       // Quando o background pede abertura
       OBR.player.onChange(async (player) => {
         const m = player.metadata || {};
-        if (m[OPEN_FLAG]) {
-          await openFromTokenRequest();
+        if (typeof m[AUTO_OPEN_KEY] === "boolean" && m[AUTO_OPEN_KEY] !== autoOpenOnSelect) {
+          autoOpenOnSelect = m[AUTO_OPEN_KEY];
+          renderAutoOpenButton();
         }
+        if (m[OPEN_FLAG]) await openFromTokenRequest();
       });
 
-      // Já veio de um clique no token?
-      await openFromTokenRequest();
+      const playerMeta = await OBR.player.getMetadata().catch(() => ({}));
+      if (typeof playerMeta?.[AUTO_OPEN_KEY] === "boolean") {
+        autoOpenOnSelect = playerMeta[AUTO_OPEN_KEY];
+      } else {
+        const localAuto = localStorage.getItem(AUTO_OPEN_KEY);
+        if (localAuto != null) {
+          try { autoOpenOnSelect = JSON.parse(localAuto) !== false; } catch {}
+        }
+        await OBR.player.setMetadata({ [AUTO_OPEN_KEY]: autoOpenOnSelect }).catch(() => {});
+      }
+      renderAutoOpenButton();
 
-      show("bingo");
-      renderBingo();
+      // Se a extensão foi aberta a partir de um token, não volte para o Arquivo logo depois.
+      const openedFromToken = await openFromTokenRequest();
+      if (!openedFromToken) {
+        show("bingo");
+        renderBingo();
+      }
       updateTokenBadge();
     });
   } else {
+    const localAuto = localStorage.getItem(AUTO_OPEN_KEY);
+    if (localAuto != null) {
+      try { autoOpenOnSelect = JSON.parse(localAuto) !== false; } catch {}
+    }
+    renderAutoOpenButton();
     setStatus("Modo local");
     show("bingo");
     renderBingo();

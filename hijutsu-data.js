@@ -1,0 +1,111 @@
+/**
+ * Catálogo de referência dos Hijutsus de Naruto: Shinobi no Sho (Livro Básico 4.1b).
+ * Resumos originais, sem substituir as regras completas do livro. Páginas são as
+ * páginas impressas no manual. Distribuição não comercial e atribuição ao Projeto D8.
+ */
+export const HIJUTSU_CATALOG = [
+  {
+    id: "dokujutsu",
+    nome: "Dokujutsu (Arte dos Venenos)",
+    pagina: 201,
+    nivelMax: 10,
+    resumo: "Especialização em venenos. Consulte no manual os requisitos, preparação, aplicação e efeitos próprios dos venenos.",
+    preRequisitos: "Ver descrição do Hijutsu e regras de Venefício.",
+    notasPlaceholder: "Anote venenos conhecidos, preparo, aplicação, efeitos, antídotos e limitações.",
+    tags: ["veneno", "venefício", "dokujutsu"],
+  },
+  {
+    id: "hachimon",
+    nome: "Hachimon Tonkou (Oito Portões Celestiais)",
+    pagina: 202,
+    nivelMax: 8,
+    resumo: "Progressão pelos oito portões que amplia capacidades físicas, com custos e consequências específicos de cada portão.",
+    preRequisitos: "Consulte os pré-requisitos de cada portão; a progressão vai até o nível 8.",
+    notasPlaceholder: "Anote portões dominados/abertos, custos por turno, técnicas desbloqueadas e consequências.",
+    tags: ["taijutsu", "portões", "lótus", "hachimon"],
+  },
+  {
+    id: "hibon-ninpou",
+    nome: "Hibon Ninpou (Arte Ninja Única)",
+    pagina: 212,
+    nivelMax: 10,
+    resumo: "Ninpou próprio com acesso a efeitos gerais e efeitos de um elemento básico escolhido; é tratado como elemento singular e não herda benefícios de aptidões elementais comuns.",
+    preRequisitos: "O manual permite a combinação com Tensai em condições específicas; nessa combinação, Versatilidade não pode ser comprada.",
+    notasPlaceholder: "Anote o elemento escolhido, efeitos selecionados, evoluções e restrições de combinação.",
+    tags: ["ninpou", "elemento", "técnicas"],
+  },
+  {
+    id: "jinchuuriki",
+    nome: "Jinchuuriki (Poder do Sacrifício Humano)",
+    pagina: 213,
+    nivelMax: 10,
+    resumo: "Poder associado à Bijuu selada no personagem. Benefícios e modos variam conforme a besta e podem impor custos físicos e testes de domínio.",
+    preRequisitos: "Registre a Bijuu e confira a tabela de benefícios e os requisitos de cada modo/técnica.",
+    notasPlaceholder: "Anote a Bijuu, caudas, modos desbloqueados, domínio, custos físicos e técnicas especiais.",
+    tags: ["bijuu", "manto", "caudas", "jinchuuriki"],
+  },
+  {
+    id: "kagura-shingan",
+    nome: "Kagura Shingan (Olho Divino da Mente)",
+    pagina: 222,
+    nivelMax: 10,
+    resumo: "Capacidade sensorial especial. Registre o alcance, as condições de detecção e os benefícios específicos definidos pelo manual.",
+    preRequisitos: "Consulte a descrição do poder e os requisitos de cada benefício.",
+    notasPlaceholder: "Anote alcance sensorial, alvos detectáveis, tipos de chakra e limitações da percepção.",
+    tags: ["sensor", "chakra", "percepção"],
+  },
+  {
+    id: "kuchiyose",
+    nome: "Kuchiyose (Invocação)",
+    pagina: 224,
+    nivelMax: 10,
+    resumo: "Permite invocar criaturas. A espécie, quantidade e ficha seguem as regras de invocação e as características de cada espécie.",
+    preRequisitos: "Registre espécie/contrato; Senjutsu pode depender de Kuchiyose de sapos ou cobras.",
+    notasPlaceholder: "Anote contrato, espécie, nomes das invocações, quantidade e referência das fichas de criaturas.",
+    tags: ["invocação", "parceiro", "criatura"],
+  },
+  {
+    id: "magen",
+    nome: "Magen (Ilusão Demoníaca)",
+    pagina: 233,
+    nivelMax: 10,
+    resumo: "Especialização em Genjutsu com regras próprias para efeitos, resistência e evolução das ilusões.",
+    preRequisitos: "Confira os requisitos e as regras de resistência de cada efeito no manual.",
+    notasPlaceholder: "Anote efeitos de ilusão, condições de ativação, resistência, duração e evoluções escolhidas.",
+    tags: ["genjutsu", "ilusão", "magen"],
+  },
+  {
+    id: "senjutsu",
+    nome: "Senjutsu (Técnica Eremita)",
+    pagina: 239,
+    nivelMax: 10,
+    resumo: "Absorve energia natural para entrar no Modo Eremita e usar Chakra Senjutsu; ativação, reserva e benefícios possuem regras próprias.",
+    preRequisitos: "O manual exige Vigor 14 e uma via específica, como Kuchiyose de sapos/cobras com os requisitos apropriados ou Mokuton com requisito adicional.",
+    notasPlaceholder: "Anote a via de aquisição, requisitos, modo eremita, Chakra Senjutsu disponível e benefícios ativos.",
+    tags: ["modo eremita", "energia natural", "senjutsu"],
+  },
+  {
+    id: "tensai",
+    nome: "Tensai (Genialidade)",
+    pagina: 241,
+    nivelMax: 10,
+    resumo: "Hijutsu focado em genialidade e aptidões especiais. Requer controlar as opções e exceções descritas no manual.",
+    preRequisitos: "Consulte as aptidões especiais e as combinações permitidas na seção Tensai.",
+    notasPlaceholder: "Anote aptidões especiais, Trabalho Duro, técnicas e restrições escolhidas.",
+    tags: ["genialidade", "aptidões", "tensai"],
+  },
+  {
+    id: "versatilidade",
+    nome: "Versatilidade",
+    pagina: 242,
+    nivelMax: 10,
+    resumo: "Permite desenvolver poderes versáteis escolhidos pelo jogador; benefícios gerais e requisitos dos poderes escolhidos continuam relevantes.",
+    preRequisitos: "O nível de Versatilidade limita os poderes versáteis; confira as regras de escolha de efeitos e exceções.",
+    notasPlaceholder: "Anote os poderes versáteis escolhidos, níveis disponíveis, elementos e efeitos conhecidos.",
+    tags: ["elementos", "poderes versáteis", "versatilidade"],
+  },
+];
+
+export function getHijutsu(id) {
+  return HIJUTSU_CATALOG.find((item) => item.id === id) || null;
+}

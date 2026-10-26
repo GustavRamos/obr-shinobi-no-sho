@@ -682,45 +682,131 @@ label {
   text-align: right;
 }
 
-
-/* === Abas da ficha === */
-.sheet-tabs {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
-  margin: 12px 0 10px;
-  padding: 4px;
-  background: rgba(90,74,56,0.08);
-  border: 1px solid var(--line);
-  border-radius: 8px;
+/* ── Hijutsus: progressão por personagem ── */
+#btn-auto-open.auto-enabled {
+  color: #bbf7d0;
+  border-color: #2d5a27;
+  background: rgba(45,90,39,0.24);
 }
-.sheet-tabs .tab {
-  flex: 1 1 auto;
-  min-width: 72px;
-  padding: 7px 8px;
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
+.hijutsu-intro {
   color: var(--muted);
-  background: transparent;
-  border: 1px solid transparent;
-  border-radius: 6px;
-  cursor: pointer;
-}
-.sheet-tabs .tab:hover { color: var(--ink); background: rgba(255,255,255,0.35); }
-.sheet-tabs .tab.active {
-  color: #fff;
-  background: var(--seal, #9b1b1b);
-  border-color: rgba(0,0,0,0.15);
-}
-.tab-panel { display: none; }
-.tab-panel.active { display: block; animation: tabIn 0.15s ease; }
-@keyframes tabIn {
-  from { opacity: 0; transform: translateY(4px); }
-  to { opacity: 1; transform: none; }
-}
-#btn-save.ghost {
-  opacity: 0.85;
   font-size: 11px;
+  margin: -2px 0 9px;
 }
+.hijutsu-add-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 7px;
+  align-items: end;
+  margin-bottom: 8px;
+}
+.hijutsu-add-row label { min-width: 0; }
+.hijutsu-add-row button { min-height: 31px; }
+.hijutsu-rule-toggle {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 7px;
+  margin: 5px 0 8px;
+  color: var(--ink-soft);
+  font-size: 11px;
+  text-transform: none;
+  letter-spacing: 0;
+}
+.hijutsu-rule-toggle input { width: auto; margin-top: 3px; flex-shrink: 0; }
+.hijutsu-guidance {
+  border: 1px solid #9caa8b;
+  border-left: 3px solid #47733c;
+  background: #f5f7ee;
+  color: #34422e;
+  padding: 8px;
+  font-size: 10px;
+  line-height: 1.45;
+  margin: 7px 0 9px;
+  overflow-wrap: anywhere;
+}
+.hijutsu-guidance.has-warning {
+  border-color: #bd8a51;
+  border-left-color: #9b1b1b;
+  background: #fff1e5;
+  color: #6d241c;
+}
+.hijutsu-guidance ul { margin: 5px 0 0 17px; padding: 0; }
+.hijutsu-guidance li { margin: 3px 0; }
+.hijutsu-list { display: flex; flex-direction: column; gap: 7px; }
+.hijutsu-empty { font-size: 11px; padding: 13px 8px; }
+.hijutsu-card {
+  border: 1px solid #b9a57e;
+  border-left: 4px solid #8b2500;
+  background: #faf6eb;
+  padding: 9px;
+  border-radius: 2px;
+  min-width: 0;
+}
+.hijutsu-card-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+.hijutsu-card-head strong {
+  display: block;
+  font-family: "Special Elite", monospace;
+  font-size: 13px;
+  line-height: 1.35;
+}
+.hijutsu-card-head small {
+  display: block;
+  font-family: "Share Tech Mono", monospace;
+  color: var(--muted);
+  font-size: 9px;
+  margin-top: 3px;
+}
+.hijutsu-remove { flex-shrink: 0; min-width: 26px !important; padding: 3px 6px !important; }
+.hijutsu-summary, .hijutsu-prereq {
+  color: var(--ink-soft);
+  font-size: 11px;
+  margin: 5px 0;
+  overflow-wrap: anywhere;
+}
+.hijutsu-prereq { color: var(--muted); font-size: 10px; }
+.hijutsu-controls {
+  display: grid;
+  grid-template-columns: minmax(100px, 0.8fr) minmax(105px, 1fr);
+  gap: 7px;
+  align-items: end;
+  margin: 8px 0;
+}
+.hijutsu-controls label { min-width: 0; }
+.hijutsu-controls input[type="number"] { max-width: 90px; }
+.hijutsu-active {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
+  min-height: 30px;
+  font-size: 10px;
+  text-transform: none;
+  letter-spacing: 0;
+}
+.hijutsu-active input { width: auto; }
+.hijutsu-cap {
+  grid-column: 1 / -1;
+  color: var(--muted);
+  font-family: "Share Tech Mono", monospace;
+  font-size: 9px;
+}
+.hijutsu-notes-label { font-size: 10px; }
+.hijutsu-notes-label textarea { margin-top: 4px; }
+
+@media (max-width: 400px) {
+  header { align-items: flex-start; }
+  header .actions { justify-content: flex-end; }
+  .hijutsu-add-row { grid-template-columns: 1fr; }
+  .hijutsu-add-row button { width: 100%; }
+  .hijutsu-controls { grid-template-columns: 1fr 1fr; }
+}
+
+.apt-row.clan-locked { opacity: 0.58; cursor: not-allowed; }
+.apt-row.clan-locked small::after { content: " · exige o clã indicado"; font-weight: 700; }

@@ -99,23 +99,19 @@ export const APT_CATALOG = [
   },
   {
     id: "byakugan",
-    nome: "Byakugan (Hijutsu)",
+    nome: "Byakugan (Clã Hyuuga)",
+    restritoClan: "Hyuuga",
     gratis: false,
-    desc: "+2 LM, +1 Percepção",
-    mods: [
-      { tipo: "combat", alvo: "lm", valor: 2 },
-      { tipo: "attr", alvo: "percepcao", valor: 1 },
-    ],
+    desc: "Aptidão restrita de clã; consulte ativação e benefícios completos no manual, p. 157.",
+    mods: [],
   },
   {
     id: "sharingan",
-    nome: "Sharingan (Hijutsu)",
+    nome: "Sharingan (Clã Uchiha)",
+    restritoClan: "Uchiha",
     gratis: false,
-    desc: "+1 LM, +1 ESQ",
-    mods: [
-      { tipo: "combat", alvo: "lm", valor: 1 },
-      { tipo: "combat", alvo: "esq", valor: 1 },
-    ],
+    desc: "Aptidão restrita de clã; consulte ativação e benefícios completos no manual, p. 180–182.",
+    mods: [],
   },
 ];
 

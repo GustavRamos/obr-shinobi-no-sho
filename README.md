@@ -1,128 +1,77 @@
-# Shinobi no Sho — Bingo Book (Owlbear Rodeo)
+# Shinobi no Sho — Bingo Book + Fichas por Token (v1.3.0)
 
-Extensão de **Bingo Book + ficha** para o sistema **Naruto: Shinobi no Sho (D8)**.
+Extensão para **Owlbear Rodeo** inspirada no sistema **Naruto: Shinobi no Sho — Livro Básico, 4.1b**. Esta versão reorganiza o acesso às fichas por token e acrescenta uma área própria para registrar e acompanhar Hijutsus.
 
-## O que tem
+## O que mudou nesta versão
 
-### Bingo Book
-- Lista de perfis (PCs e NPCs) com **nível de ameaça** (D → SS)
-- Busca por nome, clã, vila, jutsu
-- Filtro por nível shinobi e vila
-- Cards com Vit/Cha, CC, ESQ e poderes
-- Rolagem rápida de **CC** e **ESQ** direto do card
+### Ficha individual no token
 
-### Ficha
-- Atributos, perícias, combate com **botão 🎲 em cada linha**
-- Poderes com **rank, nível, custo, precisão e dano**
-- Um clique: **Teste** (2d8+precisão) ou **Dano** (ex: `2d8+Espírito`)
-- Vitalidade/Chakra atuais editáveis
-- Radar de atributos
-- Pontos automáticos por NC
+- Cada token da camada **Character** pode guardar sua própria ficha no `metadata` da cena.
+- Ao selecionar um token, o plugin pode abrir automaticamente a ficha associada. A abertura automática pode ser desligada em **Auto-ficha: ON/OFF**.
+- Se o token ainda não tiver ficha, abrir/criar gera uma ficha vazia já vinculada ao token e salva esse registro no próprio token, mesmo antes da primeira edição.
+- Há um botão **Ficha do token** no cabeçalho, outro dentro da ficha e um menu contextual ao clicar com o botão direito no token.
+- A ficha é salva automaticamente durante a edição; o botão **Salvar** continua disponível.
+- Vincular uma ficha a um token que já tem outra ficha não sobrescreve os dados silenciosamente. Tokens duplicados no mapa ganham um ID de ficha independente na primeira abertura, mesmo que o Owlbear tenha copiado o metadata do original; tokens legados sem vínculo também são normalizados.
 
-### Rolagem no Owlbear
-- Resultados vão para a barra de status da extensão
-- E notificam a sala via `OBR.notification` (todo mundo vê)
+**Fluxo recomendado:** selecione um token na camada Character → a ficha abre; preencha e continue jogando. Se preferir não abrir automaticamente, desligue **Auto-ficha** e use **Ficha do token** ou o menu contextual.
 
-## Instalar
+> A abertura automática reage à seleção do token. Se selecionar tokens com frequência estiver atrapalhando o movimento no mapa, deixe a opção desligada e use o botão/menu quando necessário.
 
-1. Hospede a pasta `public/` em HTTPS (Netlify Drop, GitHub Pages, etc.)
-2. No Owlbear: **Profile → Add Extension**
-3. Cole: `https://SEU-SITE/manifest.json`
-4. Ative na sala → ícone **Bingo Book** no canto superior esquerdo
+### Hijutsus separados das aptidões
 
-## Dano — exemplos
+A nova seção **Hijutsus e progressão** tem catálogo, nível, indicador de atividade na cena, notas de progresso, custo de pontos de poder e referência da página impressa do manual. O catálogo cobre:
 
-| Campo dano | Resultado |
-|------------|-----------|
-| `2d8` | dois d8 |
-| `2d8+3` | dois d8 + 3 |
-| `1d8+Espírito` | usa o Espírito da ficha |
-| `2d8+Força` | usa Força |
-| `1d8+NC` | soma o NC |
+| Hijutsu | Página impressa |
+|---|---:|
+| Dokujutsu (Arte dos Venenos) | 201 |
+| Hachimon Tonkou (Oito Portões Celestiais) | 202 |
+| Hibon Ninpou (Arte Ninja Única) | 212 |
+| Jinchuuriki (Poder do Sacrifício Humano) | 213 |
+| Kagura Shingan (Olho Divino da Mente) | 222 |
+| Kuchiyose (Invocação) | 224 |
+| Magen (Ilusão Demoníaca) | 233 |
+| Senjutsu (Técnica Eremita) | 239 |
+| Tensai (Genialidade) | 241 |
+| Versatilidade | 242 |
 
-## Fluxo na mesa
+- Os níveis dos poderes/Hijutsus entram no cálculo de pontos de poder gastos.
+- O nível máximo sugerido na ficha respeita o limite geral de poder baseado no NC e o limite específico registrado no catálogo — por exemplo, Hachimon Tonkou vai até o nível 8.
+- O painel alerta para combinações que precisam de atenção, a regra usual de um Hijutsu ou um clã, a regra opcional para múltiplos Hijutsus, e a restrição de Versatilidade com Hibon Ninpou + Tensai.
+- A combinação Senjutsu + Kuchiyose é reconhecida como complementar. A ficha alerta se Vigor estiver abaixo de 14 e se não houver uma via aparente registrada, mas os requisitos específicos (tipo de contrato, aptidões necessárias e caminho por Mokuton) ainda devem ser verificados no livro.
+- Perfis antigos que guardavam um nome de Hijutsu no campo **Clã / Hijutsu** são migrados quando o texto corresponde exatamente ao nome/identificador do catálogo.
 
-1. Abra o **Bingo Book**
-2. Cadastre inimigos/aliados (+ Novo → preencha → Salvar)
-3. No combate: abra o perfil ou role CC/ESQ no card
-4. Na ficha: 🎲 em perícia, atributo ou poder
-5. Dano do jutsu: botão **Dano** no card do poder
+**Importante:** o catálogo é uma referência compacta, não uma transcrição do manual. Ele não automatiza todas as técnicas, pré-requisitos, custos em situações especiais, efeitos ou exceções de cada poder. Use as páginas impressas indicadas no livro para validar as regras da mesa; quando uma combinação opcional for permitida, a decisão e a interação dos benefícios pertencem ao Mestre.
 
-## Arquivos
+### Correção de Byakugan e Sharingan
 
-```
-public/
-  manifest.json
-  index.html
-  app.js
-  style.css
-  icon.svg
-```
+Byakugan e Sharingan são tratados como aptidões restritas de clãs — Hyuuga e Uchiha — e não como entradas autônomas do catálogo geral de Hijutsus. Foram removidos seus bônus estáticos simplificados, porque o manual descreve ativação e benefícios específicos. Perfis antigos que aplicavam esses modificadores são ajustados para não continuar somando bônus que não correspondem às regras completas.
 
+### Organização e segurança dos dados
 
-## Dados na mesa (física / histórico)
+- Dados do personagem ficam no `metadata` do token; o arquivo do jogador e o `localStorage` continuam servindo como cópias auxiliares.
+- O salvamento automático é finalizado antes de trocar de ficha, evitando que uma edição pendente vá parar no personagem errado.
+- A ficha não sobrescreve uma ficha de token diferente sem avisar.
+- O controle de acesso por dono/GM continua ativo.
 
-O Bingo Book **não desenha dados 3D sozinho** — isso é papel das extensões de dados do Owlbear.
+## Instalação / atualização
 
-### Recomendado na mesma sala
+1. Hospede os arquivos da pasta raiz em uma URL **HTTPS** (por exemplo, GitHub Pages ou outro host estático).
+2. No Owlbear Rodeo, abra **Profile → Add Extension**.
+3. Informe a URL HTTPS do `manifest.json` hospedado.
+4. Para atualizar uma instalação existente, mantenha a mesma URL do manifesto e publique a nova versão dos arquivos.
 
-1. **JustDices** (histórico na mesa + API)  
-   Instalar: `https://justdices.onrender.com/manifest.json`  
-   Com ele ativo, cada 🎲 do Bingo Book envia `2d8+precisão` (ou a fórmula de dano) para a mesa. Todos veem no log do JustDices.
+Os arquivos devem permanecer juntos na raiz: `manifest.json`, `index.html`, `app.js`, `background.js`, `background.html`, `style.css`, `hijutsu-data.js`, `aptidoes-data.js` e `icon.svg`.
 
-2. **Dice** (oficial Owlbear — 3D com física)  
-   Extensão da loja: [Dice](https://extensions.owlbear.rodeo/dice)  
-   Abra o tray, coloque **dois d8** + bônus e role. A física e a animação sincronizam para todos.
+Para desenvolvimento local, `npm start` serve a pasta atual na porta 5173; o SDK do Owlbear continua sendo carregado por CDN.
 
-### Fluxo prático
+## Recursos mantidos
 
-| O que você quer | Como |
-|-----------------|------|
-| Rolar da ficha e ver na mesa | Bingo Book 🎲 + **JustDices** instalado |
-| Ver dados 3D caindo | Extensão **Dice** oficial |
-| Os dois | Use as duas extensões na sala |
+- Bingo Book com busca e filtros por nível/vila.
+- Fichas com atributos, perícias, combate, vitalidade, chakra, aptidões, poderes/jutsus e notas.
+- Rolagens 2d8, testes de perícias/combate e cálculo de dano com expressões como `2d8+3`, `2d8+Espírito` e `1d8+NC`.
+- Resultados exibidos na extensão e notificados na sala quando suportado pelo ambiente.
+- Cartões de poderes com rank, nível, custo de chakra, precisão, dano e descrição.
 
-O resultado do **sistema** (fracasso 2–3, sucesso 15–16, total + precisão) continua na notificação e na barra do Bingo Book.
+## Licença e referência
 
-
-## Ficha por token
-
-Cada personagem/NPC no **mapa** pode ter a ficha gravada no próprio token.
-
-### Como usar
-
-1. Coloque um token na camada **Character**
-2. Clique com o botão direito no token → **Bingo Book — Dossiê**
-3. Preencha e **Salvar** → dados ficam no `metadata` do token
-4. Ou no dossiê: **Vincular ao token selecionado**
-
-### O que fica onde
-
-| Local | Conteúdo |
-|-------|----------|
-| **Token** | Ficha completa (atributos, perícias, poderes, Vit/Cha) |
-| **Lista do player** | Cópia no Bingo Book (arquivo) |
-| **localStorage** | Backup no navegador |
-
-Ao reabrir a cena, o token ainda tem a ficha. Clique de novo no token → **Dossiê**.
-
-
-## Acesso exclusivo por jogador
-
-Cada ficha tem um **dono** (`ownerId` do player no Owlbear).
-
-| Papel | Pode ver | Pode editar |
-|-------|----------|-------------|
-| **Jogador** | Só as próprias fichas (+ sem dono) | Só as próprias |
-| **GM** | Todas | Todas |
-
-### Como funciona
-
-1. Ao criar/salvar uma ficha, o jogador vira **dono**
-2. No Bingo Book, o jogador **só vê a lista dele**
-3. No token de outro player → mensagem de bloqueio
-4. Botão **Tornar-me dono** (se sem dono ou se for GM)
-
-### Dica de mesa
-
-No Owlbear, ative também **CHARACTER_OWNER_ONLY** nas permissões da sala para os jogadores só moverem o próprio token. A ficha do Bingo Book reforça a mesma regra no dossiê.
+A lógica do plugin e os resumos curtos do catálogo são código/material auxiliar da extensão. A referência de regras é **Naruto: Shinobi no Sho — Livro Básico, 4ª edição (4.1b)**, de Diego “Fesant” Silva e colaboradores, publicado pelo Projeto D8. O livro identifica licença **Creative Commons Atribuição–Uso Não-Comercial–Compartilhamento pela mesma licença 2.5 Brasil (CC BY-NC-SA 2.5 BR)**. Este plugin não substitui o livro e mantém as descrições dos Hijutsus em forma resumida e para consulta de páginas.
