@@ -655,6 +655,24 @@ function show(v) {
   $("view-power").classList.toggle("hidden", v !== "power");
 }
 
+function setActiveSheetTab(tabName = "perfil") {
+  const tabs = document.querySelectorAll("[data-sheet-tab]");
+  const panels = document.querySelectorAll("[data-sheet-panel]");
+  const found = [...tabs].some((tab) => tab.dataset.sheetTab === tabName);
+  const active = found ? tabName : "perfil";
+  tabs.forEach((tab) => {
+    const selected = tab.dataset.sheetTab === active;
+    tab.classList.toggle("active", selected);
+    tab.setAttribute("aria-selected", selected ? "true" : "false");
+    tab.tabIndex = selected ? 0 : -1;
+  });
+  panels.forEach((panel) => {
+    const selected = panel.dataset.sheetPanel === active;
+    panel.classList.toggle("active", selected);
+    panel.hidden = !selected;
+  });
+}
+
 function esc(s) {
   return String(s ?? "").replace(/[&<>"']/g, (c) =>
     ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
@@ -1126,6 +1144,7 @@ function applyNcLimitsToInputs() {
 }
 
 function fillSheet() {
+  setActiveSheetTab("perfil");
   isFillingSheet = true;
   normalize(current);
   $("nome").value = current.nome || "";
@@ -1631,6 +1650,10 @@ function readSheet() {
 }
 
 function bind() {
+  document.querySelectorAll("[data-sheet-tab]").forEach((tab) => {
+    tab.addEventListener("click", () => setActiveSheetTab(tab.dataset.sheetTab));
+  });
+  setActiveSheetTab("perfil");
   const sheetRoot = $("view-sheet");
   if (sheetRoot) {
     sheetRoot.addEventListener("input", scheduleAutosave);

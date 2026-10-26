@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
-  <title>Bingo Book — Shinobi no Sho</title>
+  <title>Bingo Book — Shinobi no Sho v1.3.1</title>
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
@@ -58,13 +58,18 @@
       </div>
 
       <div id="lock-banner" class="lock-banner hidden"></div>
-      <div class="token-bar">
-        <button type="button" id="btn-open-selected-token" class="primary">Abrir/criar ficha do token selecionado</button>
-        <button type="button" id="btn-bind-token" class="ghost" style="color:var(--ink);border-color:var(--line)">Vincular esta ficha ao token</button>
-        <button type="button" id="btn-unbind-token" class="ghost" style="color:var(--ink);border-color:var(--line)">Desvincular</button>
-        <button type="button" id="btn-claim-owner" class="ghost" style="color:var(--ink);border-color:var(--line)">Tornar-me dono</button>
-      </div>
+      <nav class="sheet-tabs" role="tablist" aria-label="Seções da ficha">
+        <button type="button" class="sheet-tab active" role="tab" aria-selected="true" data-sheet-tab="perfil">Perfil</button>
+        <button type="button" class="sheet-tab" role="tab" aria-selected="false" data-sheet-tab="atributos">Atributos</button>
+        <button type="button" class="sheet-tab" role="tab" aria-selected="false" data-sheet-tab="combate">Combate</button>
+        <button type="button" class="sheet-tab" role="tab" aria-selected="false" data-sheet-tab="pericias">Perícias</button>
+        <button type="button" class="sheet-tab" role="tab" aria-selected="false" data-sheet-tab="tecnicas">Jutsus</button>
+        <button type="button" class="sheet-tab" role="tab" aria-selected="false" data-sheet-tab="hijutsus">Hijutsus</button>
+        <button type="button" class="sheet-tab" role="tab" aria-selected="false" data-sheet-tab="aptidoes">Aptidões</button>
+        <button type="button" class="sheet-tab" role="tab" aria-selected="false" data-sheet-tab="notas">Notas</button>
+      </nav>
 
+      <section class="sheet-tab-panel active" role="tabpanel" data-sheet-panel="perfil" aria-label="Perfil">
       <div class="sheet-top">
         <div class="sheet-portrait" id="sheet-portrait">忍</div>
         <div class="sheet-id grid grid-2" style="flex:1">
@@ -94,15 +99,23 @@
         <label>Vitalidade <div class="inline"><input id="vit-atual" type="number" /><span id="vit-max">/—</span></div></label>
         <label>Chakra <div class="inline"><input id="cha-atual" type="number" /><span id="cha-max">/—</span></div></label>
       </div>
+      <details class="token-settings">
+        <summary>Vínculo e acesso do token</summary>
+        <div class="token-bar">
+          <button type="button" id="btn-bind-token" class="ghost" style="color:var(--ink);border-color:var(--line)">Vincular ficha</button>
+          <button type="button" id="btn-unbind-token" class="ghost" style="color:var(--ink);border-color:var(--line)">Desvincular</button>
+          <button type="button" id="btn-claim-owner" class="ghost" style="color:var(--ink);border-color:var(--line)">Tornar-me dono</button>
+        </div>
+      </details>
+      </section>
 
-      <hr class="divider" />
-
+      <section class="sheet-tab-panel" role="tabpanel" data-sheet-panel="atributos" aria-label="Atributos">
       <div class="section-title">Atributos <span class="pts" id="pts-atr"></span></div>
       <div class="attr-list" id="attr-list"></div>
       <div class="radar-wrap"><canvas id="radar" width="200" height="200"></canvas></div>
+      </section>
 
-      <hr class="divider" />
-
+      <section class="sheet-tab-panel" role="tabpanel" data-sheet-panel="combate" aria-label="Combate">
       <div class="section-title">Combate</div>
       <div class="stat-row">
         <div class="stat"><div class="v" id="cc">—</div><div class="k">CC</div>
@@ -120,20 +133,20 @@
         <label>Dif <input id="roll-dif" type="number" placeholder="—" /></label>
         <button type="button" id="btn-roll-custom" class="primary">2d8</button>
       </div>
+      </section>
 
-      <hr class="divider" />
-
+      <section class="sheet-tab-panel" role="tabpanel" data-sheet-panel="pericias" aria-label="Perícias">
       <div class="section-title">Perícias <span class="pts" id="pts-per"></span></div>
       <div class="per-list" id="per-list"></div>
+      </section>
 
-      <hr class="divider" />
-
+      <section class="sheet-tab-panel" role="tabpanel" data-sheet-panel="tecnicas" aria-label="Poderes e Jutsus">
       <div class="section-title">Poderes / Jutsus <span class="pts" id="pts-poder"></span></div>
       <div id="power-list"></div>
       <button type="button" id="btn-add-power" class="primary" style="width:100%;margin-top:8px">+ Registrar poder</button>
+      </section>
 
-      <hr class="divider" />
-
+      <section class="sheet-tab-panel" role="tabpanel" data-sheet-panel="hijutsus" aria-label="Hijutsus">
       <div class="section-title">Hijutsus e progressão <span class="pts" id="hijutsu-count"></span></div>
       <p class="hijutsu-intro">Acompanhe o Hijutsu, seu nível, estado e notas de evolução. O nível consome pontos de poder e respeita o limite geral de NC. Cadastre as técnicas individuais em Poderes/Jutsus e valide requisitos/efeitos completos nas páginas do manual.</p>
       <div class="hijutsu-add-row">
@@ -145,16 +158,17 @@
       <label class="hijutsu-rule-toggle"><input type="checkbox" id="hijutsu-multiple" /> Regra opcional do Mestre: permitir múltiplos Hijutsus / clã + Hijutsu</label>
       <div id="hijutsu-guidance" class="hijutsu-guidance">Compatibilidade e pré-requisitos serão verificados aqui.</div>
       <div id="hijutsu-list" class="hijutsu-list"></div>
+      </section>
 
-      <hr class="divider" />
-
+      <section class="sheet-tab-panel" role="tabpanel" data-sheet-panel="aptidoes" aria-label="Aptidões">
       <div class="section-title">Aptidões e bônus personalizados</div>
       <div id="apt-catalog" class="apt-catalog"></div>
       <div class="section-title" style="margin-top:10px">Bônus ativos (marque o que aplica · edite o valor)</div>
       <div id="apt-custom-list"></div>
       <textarea id="aptidoes" placeholder="Notas livres de aptidões…" style="margin-top:8px"></textarea>
+      </section>
 
-      <hr class="divider" />
+      <section class="sheet-tab-panel" role="tabpanel" data-sheet-panel="notas" aria-label="Gráficos e notas">
       <div class="section-title">Foco em combate</div>
       <div class="radar-wrap"><canvas id="chart-combat" width="220" height="200"></canvas></div>
       <div class="section-title">Foco em perícias (top 8)</div>
@@ -162,6 +176,7 @@
 
       <div class="section-title" style="margin-top:10px">Notas de inteligência</div>
       <textarea id="notas" placeholder="Fraquezas, padrões de combate, recompensas, observação de campo…"></textarea>
+      </section>
     </div>
   </main>
 
